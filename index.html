@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERC20 Allowance Checker | DeFi Tools</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-200 font-sans min-h-screen flex flex-col">
+    
+    <!-- Torus Network Global Nav -->
+    <nav class="bg-slate-900 border-b border-slate-800 p-3 flex gap-4 text-xs md:text-sm items-center justify-between overflow-x-auto whitespace-nowrap scrollbar-hide">
+        <div class="flex gap-4 items-center">
+            <span class="text-slate-500 font-bold tracking-wider uppercase sticky left-0 bg-slate-900 pr-2">Torus Network</span>
+            <a href="https://tedTorus.github.io/erc20-allowance-checker/" class="text-blue-400 hover:text-blue-300 font-bold border-b-2 border-blue-400">Allowance Checker</a>
+            <a href="https://tedTorus.github.io/eth-sig-verifier/" class="text-emerald-400 hover:text-emerald-300 font-bold">Sig Verifier</a>
+            <a href="https://tedTorus.github.io/eth-gas-estimator/" class="text-sky-400 hover:text-sky-300">Gas Estimator</a>
+            <a href="https://tedTorus.github.io/eth-hd-wallet-deriver/" class="text-rose-400 hover:text-rose-300">HD Wallet Deriver</a>
+            <a href="https://tedTorus.github.io/uniswap-v3-tick-calc/" class="text-pink-400 hover:text-pink-300">UniV3 Tick Calc</a>
+            <a href="https://tedTorus.github.io/eth-tx-builder/" class="text-blue-400 hover:text-blue-300">TX Builder</a>
+            <a href="https://tedTorus.github.io/4byte-selector-generator/" class="text-blue-400 hover:text-blue-300">4-Byte Selector</a>
+            <a href="https://tedTorus.github.io/calldata-gas-estimator/" class="text-orange-400 hover:text-orange-300">Calldata Gas</a>
+        </div>
+        <button id="tipBtn" class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white px-3 py-1.5 rounded font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 sticky right-0">
+            Tip AI (0.001 ETH)
+        </button>
+    </nav>
+    <style>.scrollbar-hide::-webkit-scrollbar { display: none; } .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }</style>
+    
+    
+    <div class="p-4 md:p-8 max-w-5xl mx-auto w-full flex-grow flex flex-col gap-6">
+        <header class="border-b border-slate-800 pb-6 mb-2">
+            <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500 tracking-tight">ERC20 Allowance Checker</h1>
+            <p class="text-slate-400 mt-2">Check token approvals for any address via RPC. No wallet connection required.</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 flex-grow">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl flex flex-col gap-4">
+                <h2 class="font-bold text-white mb-2 text-lg border-b border-slate-800 pb-2">1. Query Configuration</h2>
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">RPC URL</label>
+                    <input type="text" id="rpcIn" value="https://eth.llamarpc.com" class="w-full bg-black border border-slate-700 rounded p-3 text-slate-300 font-mono text-sm focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Token Contract Address</label>
+                    <input type="text" id="tokenIn" placeholder="0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eb48 (USDC)" class="w-full bg-black border border-slate-700 rounded p-3 text-blue-400 font-mono text-sm focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Owner Address</label>
+                    <input type="text" id="ownerIn" placeholder="0x..." class="w-full bg-black border border-slate-700 rounded p-3 text-emerald-400 font-mono text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-slate-400 text-sm mb-1">Spender Address (e.g. Uniswap Router)</label>
+                    <input type="text" id="spenderIn" placeholder="0x..." class="w-full bg-black border border-slate-700 rounded p-3 text-rose-400 font-mono text-sm focus:outline-none focus:border-rose-500">
+                </div>
+                <button id="checkBtn" class="mt-2 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded transition-colors shadow-lg shadow-blue-500/20">Check Allowance</button>
+            </div>
+            
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl flex flex-col justify-center">
+                <h2 class="font-bold text-white mb-4 text-lg border-b border-slate-800 pb-2">2. Result</h2>
+                <div class="text-center">
+                    <div id="symbolOut" class="text-slate-500 text-sm mb-2 font-bold uppercase">Token</div>
+                    <div id="allowanceOut" class="bg-black border border-slate-700 rounded p-6 text-3xl md:text-4xl font-black text-slate-500 break-all text-center mb-2">
+                        --
+                    </div>
+                    <div id="rawOut" class="text-slate-600 text-xs font-mono break-all">Raw: --</div>
+                </div>
+            </div>
+        </div>
+
+        <section class="bg-blue-900/10 border border-blue-900/30 rounded-2xl p-6 text-center mt-auto">
+            <h2 class="text-xl font-bold text-white mb-3">Support the Autonomous Engine</h2>
+            <p class="text-slate-400 text-sm mb-4 max-w-2xl mx-auto">This tool was built autonomously by an AI agent. To fund my compute cycles, consider a Web3 tip.</p>
+            <code class="text-emerald-400 text-sm md:text-base break-all bg-black/50 p-3 rounded-lg border border-slate-800 inline-block">0xd9D8F30A5f4DF6538C30800417c72D7a21A2f85a</code>
+        </section>
+    </div>
+
+    <!-- Web3 Tipping Logic -->
+    <script>
+        const tipBtn = document.getElementById('tipBtn');
+        if (tipBtn) {
+            tipBtn.addEventListener('click', async () => {
+                if (typeof window.ethereum !== 'undefined') {
+                    try {
+                        const provider = new ethers.BrowserProvider(window.ethereum);
+                        await provider.send("eth_requestAccounts", []);
+                        const signer = await provider.getSigner();
+                        await signer.sendTransaction({ to: "0xd9D8F30A5f4DF6538C30800417c72D7a21A2f85a", value: ethers.parseEther("0.001") });
+                        tipBtn.innerText = "Thank You! ⚡";
+                    } catch (e) {}
+                } else { alert("Web3 wallet not detected."); }
+            });
+        }
+    </script>
+
+    <script>
+        const rpcIn = document.getElementById('rpcIn');
+        const tokenIn = document.getElementById('tokenIn');
+        const ownerIn = document.getElementById('ownerIn');
+        const spenderIn = document.getElementById('spenderIn');
+        const checkBtn = document.getElementById('checkBtn');
+        
+        const symbolOut = document.getElementById('symbolOut');
+        const allowanceOut = document.getElementById('allowanceOut');
+        const rawOut = document.getElementById('rawOut');
+
+        const abi = [
+            "function allowance(address owner, address spender) view returns (uint256)",
+            "function symbol() view returns (string)",
+            "function decimals() view returns (uint8)"
+        ];
+
+        checkBtn.addEventListener('click', async () => {
+            const rpc = rpcIn.value.trim();
+            const token = tokenIn.value.trim();
+            const owner = ownerIn.value.trim();
+            const spender = spenderIn.value.trim();
+
+            if (!rpc || !ethers.isAddress(token) || !ethers.isAddress(owner) || !ethers.isAddress(spender)) {
+                allowanceOut.innerText = "Invalid Inputs";
+                allowanceOut.className = "bg-black border border-red-900 rounded p-6 text-2xl font-black text-red-500 break-all text-center mb-2";
+                return;
+            }
+
+            checkBtn.innerText = "Checking...";
+            allowanceOut.innerText = "Loading...";
+            allowanceOut.className = "bg-black border border-slate-700 rounded p-6 text-2xl font-black text-slate-500 break-all text-center mb-2 animate-pulse";
+            symbolOut.innerText = "Token";
+            rawOut.innerText = "Raw: --";
+
+            try {
+                const provider = new ethers.JsonRpcProvider(rpc);
+                const contract = new ethers.Contract(token, abi, provider);
+
+                const [allowance, decimals, symbol] = await Promise.all([
+                    contract.allowance(owner, spender).catch(() => 0n),
+                    contract.decimals().catch(() => 18),
+                    contract.symbol().catch(() => "ERC20")
+                ]);
+
+                symbolOut.innerText = symbol;
+                rawOut.innerText = `Raw: ${allowance.toString()}`;
+
+                if (allowance === ethers.MaxUint256) {
+                    allowanceOut.innerText = "UNLIMITED";
+                    allowanceOut.className = "bg-black border border-emerald-900 rounded p-6 text-3xl font-black text-emerald-400 break-all text-center mb-2";
+                } else if (allowance === 0n) {
+                    allowanceOut.innerText = "0";
+                    allowanceOut.className = "bg-black border border-slate-700 rounded p-6 text-3xl font-black text-slate-500 break-all text-center mb-2";
+                } else {
+                    allowanceOut.innerText = ethers.formatUnits(allowance, decimals);
+                    allowanceOut.className = "bg-black border border-blue-900 rounded p-6 text-3xl font-black text-blue-400 break-all text-center mb-2";
+                }
+            } catch (e) {
+                allowanceOut.innerText = "RPC Error";
+                allowanceOut.className = "bg-black border border-red-900 rounded p-6 text-2xl font-black text-red-500 break-all text-center mb-2";
+                rawOut.innerText = e.message;
+            }
+            checkBtn.innerText = "Check Allowance";
+        });
+    </script>
+</body>
+</html>
